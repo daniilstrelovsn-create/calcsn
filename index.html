@@ -73,6 +73,22 @@
             font-size: 16px;
         }
         
+        .school-type {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+        }
+        
+        .school-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .school-option input {
+            width: auto;
+        }
+        
         .activities-panel {
             margin-top: 20px;
             padding: 15px;
@@ -233,6 +249,21 @@
             background-color: #f9f9f9;
         }
         
+        .calendar-day.holiday {
+            background-color: #fff0f0;
+            position: relative;
+        }
+        
+        .calendar-day.holiday::after {
+            content: "✕";
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            color: #ff6b6b;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
         .day-number {
             font-weight: bold;
             margin-bottom: 5px;
@@ -240,6 +271,10 @@
         
         .day-number.other-month {
             color: #bbb;
+        }
+        
+        .day-number.holiday {
+            color: #ff6b6b;
         }
         
         .activity-marker {
@@ -377,6 +412,20 @@
             <div class="form-group">
                 <label for="student-name">Имя ученика:</label>
                 <input type="text" id="student-name" placeholder="Введите имя ученика">
+            </div>
+            
+            <div class="form-group">
+                <label>Тип школы:</label>
+                <div class="school-type">
+                    <div class="school-option">
+                        <input type="radio" id="school-high" name="school-type" value="high" checked>
+                        <label for="school-high">Старшая школа</label>
+                    </div>
+                    <div class="school-option">
+                        <input type="radio" id="school-elementary" name="school-type" value="elementary">
+                        <label for="school-elementary">Младшая школа</label>
+                    </div>
+                </div>
             </div>
             
             <div class="form-group">
@@ -527,10 +576,24 @@
             // Текущая дата для календаря
             let currentDate = new Date(2025, 8, 1); // Сентябрь 2025
             
-            // Данные о занятиях
+            // Фиксированные цвета для занятий в указанном порядке
+            const activityColors = [
+                '#ff7e5f', // оранжевый
+                '#4a6fa5', // синий
+                '#eb8cbc', // голубой
+                '#ff6b6b', // красный
+                '#2e8b57', // темно-зеленый
+                '#8a2be2', // фиолетовый
+                '#ffa500', // оранжевый2
+                '#ffd700', // желтый
+                '#87ceeb', // голубой2
+                '#000000'  // черный
+            ];
+            
+            // Данные о занятиях с фиксированными цветами
             let activities = [
-                { name: 'Математика', price: 500, color: '#ff7e5f' },
-                { name: 'Английский', price: 600, color: '#4a6fa5' }
+                { name: 'Математика', price: 500, color: activityColors[0] },
+                { name: 'Английский', price: 600, color: activityColors[1] }
             ];
             
             // Типовая неделя
@@ -547,6 +610,52 @@
             // Расписание по дням
             let schedule = {};
             
+            // Нерабочие дни для разных типов школ
+            const holidays = {
+                high: {
+                    // Каникулы для старшей школы
+                    vacations: [
+                        { start: '2025-06-29', end: '2025-09-01' }, // Летние каникулы до 1 сентября
+                        { start: '2025-10-04', end: '2025-10-12' },
+                        { start: '2025-11-15', end: '2025-11-23' },
+                        { start: '2025-12-31', end: '2026-01-11' },
+                        { start: '2026-02-14', end: '2026-02-22' },
+                        { start: '2026-03-23', end: '2026-03-29' },
+                        { start: '2026-06-01', end: '2026-06-07' },
+                        { start: '2026-06-29', end: '2026-09-01' }
+                    ],
+                    // Выходные дни для старшей школы
+                    daysOff: [
+                        '2025-11-03', '2025-11-04',
+                        '2026-02-23',
+                        '2026-03-09',
+                        '2026-05-01',
+                        '2026-05-11',
+                        '2026-06-12'
+                    ]
+                },
+                elementary: {
+                    // Каникулы для младшей школы
+                    vacations: [
+                        { start: '2025-06-29', end: '2025-09-01' }, // Летние каникулы до 1 сентября
+                        { start: '2025-10-04', end: '2025-10-12' },
+                        { start: '2025-11-15', end: '2025-11-23' },
+                        { start: '2025-12-31', end: '2026-01-11' },
+                        { start: '2026-02-14', end: '2026-02-22' },
+                        { start: '2026-03-23', end: '2026-03-29' },
+                        { start: '2026-05-01', end: '2026-05-11' },
+                        { start: '2026-06-29', end: '2026-09-01' }
+                    ],
+                    // Выходные дни для младшей школы
+                    daysOff: [
+                        '2025-11-03', '2025-11-04',
+                        '2026-02-23',
+                        '2026-03-09',
+                        '2026-06-12'
+                    ]
+                }
+            };
+            
             // Инициализация
             initCalendar();
             updateResults();
@@ -561,6 +670,14 @@
             // Обновление результатов при изменении настроек
             document.querySelectorAll('#student-name, #start-date, #end-date').forEach(element => {
                 element.addEventListener('change', updateResults);
+            });
+            
+            // Обработчик изменения типа школы
+            document.querySelectorAll('input[name="school-type"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    updateResults();
+                    generateCalendar(currentDate);
+                });
             });
             
             // Функции
@@ -605,17 +722,17 @@
                 // Группируем дни по неделям
                 let weeks = [];
                 let currentWeek = [];
-                let currentDate = new Date(startDate);
+                let currentDateTemp = new Date(startDate);
                 
                 // Заполняем календарь днями
-                while (currentDate <= endDate) {
+                while (currentDateTemp <= endDate) {
                     if (currentWeek.length === 7) {
                         weeks.push(currentWeek);
                         currentWeek = [];
                     }
                     
-                    currentWeek.push(new Date(currentDate));
-                    currentDate.setDate(currentDate.getDate() + 1);
+                    currentWeek.push(new Date(currentDateTemp));
+                    currentDateTemp.setDate(currentDateTemp.getDate() + 1);
                 }
                 
                 if (currentWeek.length > 0) {
@@ -640,6 +757,12 @@
                             dayCell.classList.add('other-month');
                         }
                         
+                        // Проверка на праздничный день
+                        const isHoliday = isHolidayDay(day);
+                        if (isHoliday) {
+                            dayCell.classList.add('holiday');
+                        }
+                        
                         const dayNumber = document.createElement('div');
                         dayNumber.classList.add('day-number');
                         dayNumber.textContent = day.getDate();
@@ -647,6 +770,11 @@
                         // Если день не принадлежит текущему месяцу, делаем его бледным
                         if (isOtherMonth) {
                             dayNumber.classList.add('other-month');
+                        }
+                        
+                        // Если праздничный день, делаем его красным
+                        if (isHoliday) {
+                            dayNumber.classList.add('holiday');
                         }
                         
                         dayCell.appendChild(dayNumber);
@@ -672,8 +800,8 @@
                             });
                         }
                         
-                        // Добавление кнопок действий (только для дней текущего месяца)
-                        if (!isOtherMonth) {
+                        // Добавление кнопок действий (только для дней текущего месяца и не праздничных)
+                        if (!isOtherMonth && !isHoliday) {
                             const dayActions = document.createElement('div');
                             dayActions.classList.add('day-actions');
                             
@@ -724,6 +852,35 @@
                 ];
                 document.getElementById('current-month').textContent = 
                     `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+            }
+            
+            function isHolidayDay(date) {
+                const schoolType = document.querySelector('input[name="school-type"]:checked').value;
+                const dateKey = formatDate(date);
+                const schoolHolidays = holidays[schoolType];
+                
+                // Проверка выходных дней
+                if (schoolHolidays.daysOff.includes(dateKey)) {
+                    return true;
+                }
+                
+                // Проверка каникул
+                for (const vacation of schoolHolidays.vacations) {
+                    const vacationStart = parseDate(vacation.start);
+                    const vacationEnd = parseDate(vacation.end);
+                    const currentDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                    
+                    if (currentDate >= vacationStart && currentDate <= vacationEnd) {
+                        return true;
+                    }
+                }
+                
+                return false;
+            }
+            
+            function parseDate(dateString) {
+                const parts = dateString.split('-');
+                return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
             }
             
             function calculateWeekCost(week) {
@@ -880,6 +1037,9 @@
             }
             
             function applyScheduleToCalendar() {
+                // Сохраняем текущую дату календаря
+                const originalDate = new Date(currentDate);
+                
                 // Очищаем текущее расписание
                 schedule = {};
                 
@@ -888,23 +1048,24 @@
                 const endDate = new Date(document.getElementById('end-date').value);
                 
                 // Применяем типовую неделю ко всем неделям в периоде
-                let currentDate = new Date(startDate);
+                let currentDateTemp = new Date(startDate);
                 
-                while (currentDate <= endDate) {
-                    const dayOfWeek = currentDate.getDay();
-                    const dateKey = formatDate(currentDate);
+                while (currentDateTemp <= endDate) {
+                    const dayOfWeek = currentDateTemp.getDay();
+                    const dateKey = formatDate(currentDateTemp);
                     
-                    // Добавляем занятия для этого дня из типовой недели
-                    if (typicalWeek[dayOfWeek] && typicalWeek[dayOfWeek].length > 0) {
+                    // Добавляем занятия только если день не праздничный
+                    if (!isHolidayDay(currentDateTemp) && typicalWeek[dayOfWeek] && typicalWeek[dayOfWeek].length > 0) {
                         // Фильтруем undefined значения
                         schedule[dateKey] = typicalWeek[dayOfWeek].filter(val => val !== undefined);
                     }
                     
                     // Переходим к следующему дню
-                    currentDate.setDate(currentDate.getDate() + 1);
+                    currentDateTemp.setDate(currentDateTemp.getDate() + 1);
                 }
                 
-                // Обновляем календарь и результаты
+                // Восстанавливаем исходную дату и обновляем календарь
+                currentDate = originalDate;
                 generateCalendar(currentDate);
                 updateResults();
                 
@@ -916,17 +1077,25 @@
                 const newActivity = document.createElement('div');
                 newActivity.classList.add('activity-item');
                 
-                const colors = ['#ff7e5f', '#4a6fa5', '#6b8cbc', '#8ac6d1', '#bbeaa6', '#f4e76e'];
-                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                // Получаем следующий цвет из фиксированного списка
+                const nextColorIndex = activities.length;
+                const color = activityColors[nextColorIndex % activityColors.length];
                 
                 newActivity.innerHTML = `
                     <input type="text" class="activity-name" placeholder="Название занятия">
                     <input type="number" class="activity-price" placeholder="Стоимость" min="0">
-                    <span class="activity-color" style="display: inline-block; width: 20px; height: 20px; background-color: ${randomColor}; border-radius: 50%;"></span>
+                    <span class="activity-color" style="display: inline-block; width: 20px; height: 20px; background-color: ${color}; border-radius: 50%;"></span>
                     <button class="btn btn-secondary remove-activity-btn">×</button>
                 `;
                 
                 activitiesList.appendChild(newActivity);
+                
+                // Добавляем новое занятие в массив
+                activities.push({
+                    name: '',
+                    price: 0,
+                    color: color
+                });
                 
                 // Добавление обработчика изменения
                 newActivity.querySelectorAll('input').forEach(input => {
@@ -938,13 +1107,12 @@
                 
                 // Обработчик для кнопки удаления
                 newActivity.querySelector('.remove-activity-btn').addEventListener('click', function() {
+                    const index = Array.from(activitiesList.children).indexOf(newActivity);
+                    activities.splice(index, 1);
                     newActivity.remove();
-                    updateActivitiesFromForm();
                     updateResults();
                 });
                 
-                // Обновляем массив activities
-                updateActivitiesFromForm();
                 updateResults();
             }
             
@@ -1044,26 +1212,30 @@
                 const yearlyCost = calculateYearlyCost();
                 
                 // Обновление интерфейса
-                document.getElementById('weekly-lessons').textContent = weeklyLessons;
-                document.getElementById('weekly-cost').textContent = weeklyCost + ' руб.';
+                document.getElementById('weekly-lessons').textContent = '~ '+ weeklyLessons;
+                document.getElementById('weekly-cost').textContent = '~ ' + weeklyCost + ' руб.';
                 document.getElementById('yearly-lessons').textContent = yearlyLessons;
                 document.getElementById('yearly-cost').textContent = yearlyCost + ' руб.';
             }
             
             function updateActivitiesFromForm() {
                 const activityItems = document.querySelectorAll('.activity-item');
-                activities = [];
                 
-                activityItems.forEach(item => {
+                activityItems.forEach((item, index) => {
                     const nameInput = item.querySelector('.activity-name');
                     const priceInput = item.querySelector('.activity-price');
                     const colorSpan = item.querySelector('.activity-color');
                     
-                    activities.push({
-                        name: nameInput.value,
-                        price: parseInt(priceInput.value) || 0,
-                        color: colorSpan.style.backgroundColor || '#cccccc'
-                    });
+                    // Обновляем данные в массиве activities
+                    if (activities[index]) {
+                        activities[index].name = nameInput.value;
+                        activities[index].price = parseInt(priceInput.value) || 0;
+                        // Сохраняем оригинальный цвет
+                        activities[index].color = activityColors[index % activityColors.length];
+                        
+                        // Обновляем цвет в интерфейсе
+                        colorSpan.style.backgroundColor = activities[index].color;
+                    }
                 });
             }
             
@@ -1105,7 +1277,8 @@
                 
                 while (currentDate <= endDate) {
                     const dateKey = formatDate(currentDate);
-                    if (schedule[dateKey]) {
+                    // Учитываем только дни, которые не являются праздничными
+                    if (!isHolidayDay(currentDate) && schedule[dateKey]) {
                         total += schedule[dateKey].length;
                     }
                     currentDate.setDate(currentDate.getDate() + 1);
@@ -1126,7 +1299,8 @@
                 
                 while (currentDate <= endDate) {
                     const dateKey = formatDate(currentDate);
-                    if (schedule[dateKey]) {
+                    // Учитываем только дни, которые не являются праздничными
+                    if (!isHolidayDay(currentDate) && schedule[dateKey]) {
                         schedule[dateKey].forEach(activityIndex => {
                             if (activities[activityIndex]) {
                                 total += activities[activityIndex].price;
